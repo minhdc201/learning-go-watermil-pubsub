@@ -19,6 +19,7 @@ func process(messages <-chan *message.Message) {
 }
 
 func publishMessages(publisher message.Publisher) {
+	// keep publishing the message to the "example.topic" for each 1 seconds
 	for {
 		msg := message.NewMessage(watermill.NewUUID(), []byte("Hello, world!"))
 		if err := publisher.Publish("example.topic", msg); err != nil {
@@ -49,16 +50,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// subscribe for messages in a topic named "example.topic"
 	messages, err := subscriber.Subscribe(context.Background(), "example.topic")
 	if err != nil {
 		panic(err)
 	}
+	// then process them with a customized processor, put this processor inside a go routine
 	go process(messages)
 
+	// create a new redis client for publisher
 	pubClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 		DB:   0,
 	})
+	//in any circumstances, close the publisher's client
 	defer pubClient.Close()
 
 	publisher, err := redisstream.NewPublisher(
